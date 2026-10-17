@@ -23,6 +23,12 @@ yarn start:prod         # node dist/main
 yarn lint               # oxlint --type-aware (not ESLint)
 yarn format             # prettier on src/ and test/
 
+yarn migration:generate <name>  # diff entities vs DB -> src/database/migrations/<ts>-<name>.ts (kebab-case)
+yarn migration:status           # list migrations, [X] = applied
+yarn migration:run              # apply pending migrations (ts-node)
+yarn migration:revert           # undo the last applied migration
+yarn migration:run:prod         # apply from dist/ after yarn build (no ts-node)
+
 yarn test               # unit tests (*.spec.ts)
 yarn test:e2e           # e2e tests (test/*.e2e-spec.ts, config in test/jest-e2e.json)
 yarn test:cov
@@ -43,7 +49,7 @@ Code style comes from the team's other Nest projects; follow it for new features
 - **Auth is on by default**: `AuthGuard` is the global `APP_GUARD`; mark open routes with `@Public()` (`src/shared/utils/decorators.ts`). Access token via `Authorization: Bearer` or the `token` cookie; the refresh token (`refreshToken` cookie) is signed with a separate secret.
 - **Users are global**, not tenant-scoped (`users` = email, password, type `staff|patient`). Self sign-up holds the account in Redis until the email OTP is verified, then creates a `staff` user. Tenant-owned tables carry `organizationId`.
 - **Entities**: camelCase properties, `@Entity({ name: '<snake_plural>' })`, `timestamptz` dates. `SnakeNamingStrategy` maps columns to snake_case. `User.password` is `select: false`; use `UserService.findOneWithPasswordIncluded` when you need it.
-- Schema: `DB_SYNCHRONIZE=true` auto-syncs in development. No migrations exist yet; add them before any shared or production database.
+- Schema: **migrations only**, `synchronize` is off everywhere. Options live in `src/database/database.config.ts` (shared by the app and the CLI); `src/database/data-source.ts` is the CLI entry point (loads `.env` itself; don't import it from the app). Migrations are in `src/database/migrations/`. After changing an entity, run `yarn migration:generate <kebab-name>` (files are `<timestamp>-<kebab-name>.ts`, e.g. `1792257823300-create-users-table.ts`), review the file, then `yarn migration:run`.
 - Paginated list endpoints use `@UseInterceptors(PaginationInterceptor)` and return `PaginatedResult<T>` (`{ page, limit, total, records }`).
 - Services publish changes through `EventManagerService.emit(...)` (currently a no-op placeholder).
 - Emails are queued on BullMQ (`MAIL` queue, `MailWorker`) and rendered from Handlebars templates in `components/mail/templates/`. `nest-cli.json` copies `*.hbs` into `dist/`.
