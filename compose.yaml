@@ -1,0 +1,63 @@
+name: healthbridge
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: healthbridge-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-healthbridge}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-healthbridge}
+      POSTGRES_DB: ${DB_DATABASE:-healthbridge}
+    ports:
+      - '${DB_PORT:-5433}:5432'
+    volumes:
+      # Postgres 18 images keep data under /var/lib/postgresql/<major>/, so mount the parent.
+      - ./.local/postgres-data:/var/lib/postgresql
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - healthbridge
+
+  redis:
+    image: redis:8-alpine
+    container_name: healthbridge-redis
+    restart: unless-stopped
+    # AOF persistence so BullMQ jobs survive restarts; noeviction is required by BullMQ.
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory-policy noeviction
+      --requirepass ${REDIS_PASSWORD:-healthbridge}
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    volumes:
+      - ./.local/redis-data:/data
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'redis-cli -a "${REDIS_PASSWORD:-healthbridge}" --no-auth-warning ping | grep -q PONG',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - healthbridge
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    container_name: healthbridge-mailpit
+    restart: unless-stopped
+    ports:
+      - '${SMTP_PORT:-1025}:1025' # SMTP
+      - '8025:8025' # Web inbox
+    networks:
+      - healthbridge
+
+networks:
+  healthbridge:

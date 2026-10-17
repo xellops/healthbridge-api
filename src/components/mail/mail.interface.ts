@@ -1,0 +1,30 @@
+export interface SendOption {
+  recipients: string[];
+  subject: string;
+  from?: string;
+  text?: string;
+  /** Compiled HTML */
+  template?: string;
+}
+
+export interface MailQueueOptions {
+  /** Number of times to attempt to send an email until it's successfully sent */
+  attempts?: number;
+}
+
+export interface BaseTemplateInput {
+  /** An array of email addresses */
+  recipients: string[];
+}
+
+export interface OnboardingMailInput extends BaseTemplateInput {
+  data: {
+    verificationCode: string;
+  };
+}
+
+export interface PasswordResetRequestMailInput extends BaseTemplateInput {
+  data: {
+    passwordResetCode: string;
+  };
+}

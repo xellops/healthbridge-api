@@ -1,0 +1,8 @@
+export enum ResourceType {
+  USER = 'USER',
+  ORGANIZATION = 'ORGANIZATION',
+  PATIENT = 'PATIENT',
+  CARD = 'CARD',
+  ENCOUNTER = 'ENCOUNTER',
+  APPOINTMENT = 'APPOINTMENT',
+}
