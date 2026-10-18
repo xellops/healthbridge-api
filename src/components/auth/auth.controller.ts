@@ -52,7 +52,7 @@ export class AuthController {
   @Public()
   @Post('signup')
   async signUp(@Body() body: SignUpDto) {
-    return this.authService.signUp(body);
+    await this.authService.signUp(body);
   }
 
   @Public()
