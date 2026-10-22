@@ -1,13 +1,21 @@
 import { Global, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { OrganizationService } from './organization.service';
+import { OrganizationController } from './organization.controller';
 import { Organization } from './organization.entity';
 import { UserModule } from '../user/user.module';
 import { AuthModule } from '../auth/auth.module';
+import { MailModule } from '../mail/mail.module';
 
 @Global()
 @Module({
-  imports: [TypeOrmModule.forFeature([Organization]), UserModule, AuthModule],
+  imports: [
+    TypeOrmModule.forFeature([Organization]),
+    UserModule,
+    AuthModule,
+    MailModule,
+  ],
+  controllers: [OrganizationController],
   providers: [OrganizationService],
   exports: [OrganizationService],
 })

@@ -8,7 +8,7 @@ import { Queue } from 'bullmq';
 import { JobQueueList } from '../../shared/enums/queue.enum';
 import {
   MailQueueOptions,
-  OnboardingMailInput,
+  OrganizationAdminOnboardingMailInput,
   PasswordResetRequestMailInput,
   SendOption,
 } from './mail.interface';
@@ -89,21 +89,27 @@ export class MailService {
     });
   }
 
-  async sendOnboardingMail(options: OnboardingMailInput): Promise<void> {
-    const subject = 'Welcome to HealthBridge';
-    const template = this.composeTemplate('onboarding', subject, options.data);
-    await this.queueMail(
-      { recipients: options.recipients, subject, template },
-      { attempts: 10 },
-    );
-  }
-
   async sendPasswordResetRequestMail(
     options: PasswordResetRequestMailInput,
   ): Promise<void> {
     const subject = 'HealthBridge - Password Reset';
     const template = this.composeTemplate(
       'password-reset-request',
+      subject,
+      options.data,
+    );
+    await this.queueMail(
+      { recipients: options.recipients, subject, template },
+      { attempts: 10 },
+    );
+  }
+
+  async sendOrganizationAdminOnboardingMail(
+    options: OrganizationAdminOnboardingMailInput,
+  ): Promise<void> {
+    const subject = 'Your HealthBridge organization account';
+    const template = this.composeTemplate(
+      'organization-admin-onboarding',
       subject,
       options.data,
     );

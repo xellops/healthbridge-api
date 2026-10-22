@@ -12,13 +12,10 @@ import {
 import type { CookieOptions, Response } from 'express';
 import { accessTokenTtl, AuthService, refreshTokenTtl } from './auth.service';
 import {
-  EmailVerificationDto,
   PasswordChangeDto,
   PasswordResetDto,
-  RequestEmailVerificationDto,
   RequestPasswordResetDto,
   SignInDto,
-  SignUpDto,
 } from './auth.dto';
 import { AuthTokens } from './auth.interface';
 import { Public } from '../../shared/utils/decorators';
@@ -50,12 +47,6 @@ export class AuthController {
   }
 
   @Public()
-  @Post('signup')
-  async signUp(@Body() body: SignUpDto) {
-    await this.authService.signUp(body);
-  }
-
-  @Public()
   @Post('signin')
   @HttpCode(HttpStatus.OK)
   async signIn(
@@ -74,24 +65,6 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const data = await this.authService.refreshToken(req.cookies?.refreshToken);
-    this.setCookies(res, data);
-    return data;
-  }
-
-  @Public()
-  @Post('request-email-verification')
-  async requestEmailVerification(@Body() body: RequestEmailVerificationDto) {
-    return this.authService.requestEmailVerification(body);
-  }
-
-  @Public()
-  @Post('email-verification')
-  @HttpCode(HttpStatus.OK)
-  async verifyEmail(
-    @Body() body: EmailVerificationDto,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    const data = await this.authService.verifyEmail(body);
     this.setCookies(res, data);
     return data;
   }

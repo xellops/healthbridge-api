@@ -18,7 +18,7 @@ export class Organization {
   id: string;
 
   /** A short string */
-  @Column({ type: 'varchar', length: 100 })
+  @Column({ type: 'varchar', length: 100, unique: true })
   clientId: string;
 
   /** Never loaded unless explicitly selected. */

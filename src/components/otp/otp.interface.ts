@@ -12,6 +12,5 @@ export interface OtpGenerationOptions {
 }
 
 export enum OtpScope {
-  EMAIL_VERIFICATION = 'email-verification',
   PASSWORD_RESET = 'password-reset',
 }

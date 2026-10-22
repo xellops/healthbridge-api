@@ -17,14 +17,17 @@ export interface BaseTemplateInput {
   recipients: string[];
 }
 
-export interface OnboardingMailInput extends BaseTemplateInput {
-  data: {
-    verificationCode: string;
-  };
-}
-
 export interface PasswordResetRequestMailInput extends BaseTemplateInput {
   data: {
     passwordResetCode: string;
+  };
+}
+
+export interface OrganizationAdminOnboardingMailInput extends BaseTemplateInput {
+  data: {
+    firstName: string;
+    email: string;
+    organizationName: string;
+    temporaryPassword: string;
   };
 }

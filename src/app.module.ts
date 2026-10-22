@@ -14,6 +14,7 @@ import { UserModule } from './components/user/user.module';
 import { AuthModule } from './components/auth/auth.module';
 import { ProfileModule } from './components/profile/profile.module';
 import { AppNotificationModule } from './components/app-notification/app-notification.module';
+import { OrganizationModule } from './components/organization/organization.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { AppNotificationModule } from './components/app-notification/app-notific
     AuthModule,
     ProfileModule,
     AppNotificationModule,
+    OrganizationModule,
   ],
   controllers: [AppController],
   providers: [

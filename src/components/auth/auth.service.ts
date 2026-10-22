@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
@@ -10,26 +11,21 @@ import * as bcrypt from 'bcrypt';
 import {
   AuthTokenPayload,
   AuthTokens,
-  EmailVerificationInput,
-  EmailVerificationRequestInput,
   PasswordChangeInput,
   PasswordResetInput,
   PasswordResetRequestInput,
   RefreshTokenPayload,
   SignInInput,
   SignInSuccessPayload,
-  SignUpInput,
-  UserToCreate,
 } from './auth.interface';
 import { MailService } from '../mail/mail.service';
 import { UserService } from '../user/user.service';
 import { User } from '../user/user.entity';
-import { UserType } from '../user/user.enum';
 import { OtpService } from '../otp/otp.service';
 import { OtpScope } from '../otp/otp.interface';
-import { CacheService } from '../cache/cache.service';
 import { AppNotificationService } from '../app-notification/app-notification.service';
 import { ResourceType } from '../../shared/enums/resource.enum';
+import { AuthErrorCodes } from './auth.error';
 
 /** Access token lifetime in seconds. */
 export const accessTokenTtl = () => Number(process.env.JWT_TTL ?? 15 * 60);
@@ -40,8 +36,6 @@ export const refreshTokenTtl = () =>
 @Injectable()
 export class AuthService {
   private readonly saltRounds = 12;
-  /** The amount of seconds a pending sign-up is kept while awaiting verification */
-  private readonly cachedUserToCreateTTL = 20 * 60; // 20 mins
 
   constructor(
     private jwtService: JwtService,
@@ -51,15 +45,9 @@ export class AuthService {
     private readonly userService: UserService,
     @Inject(OtpService)
     private readonly otpService: OtpService,
-    @Inject(CacheService)
-    private readonly cacheService: CacheService,
     @Inject(AppNotificationService)
     private readonly appNotificationService: AppNotificationService,
   ) {}
-
-  private getUserToCreateCacheKey(email: string) {
-    return `auth:user-to-create:${email}`;
-  }
 
   async hashPassword(unencryptedPassword: string): Promise<string> {
     return bcrypt.hash(unencryptedPassword, this.saltRounds);
@@ -76,31 +64,6 @@ export class AuthService {
     return bcrypt.compare(unencryptedPassword, user.password);
   }
 
-  /**
-   * Holds the sign-up in the cache and emails a verification code. The user
-   * is created once the email is verified.
-   */
-  async signUp(input: SignUpInput): Promise<void> {
-    const duplicate = await this.userService.findOne({ email: input.email });
-
-    if (duplicate) {
-      throw new BadRequestException('Email is already in use.');
-    }
-
-    const userToCreate: UserToCreate = {
-      email: input.email,
-      password: await this.hashPassword(input.password),
-    };
-
-    await this.cacheService.set(
-      this.getUserToCreateCacheKey(input.email),
-      userToCreate,
-      this.cachedUserToCreateTTL,
-    );
-
-    await this.sendVerificationCode(input.email);
-  }
-
   async signIn(input: SignInInput): Promise<SignInSuccessPayload> {
     const user = await this.userService.findOneWithPasswordIncluded({
       email: input.email,
@@ -108,6 +71,13 @@ export class AuthService {
 
     if (!user || !(await this.comparePassword(user, input.password))) {
       throw new UnauthorizedException('Email or password is incorrect');
+    }
+
+    if (user?.passwordResetRequired) {
+      throw new ForbiddenException({
+        code: AuthErrorCodes.AuthPasswordResetRequiredError,
+        message: 'You need to reset your password to continue',
+      });
     }
 
     const tokens = await this.tokenizeUser(user);
@@ -168,69 +138,6 @@ export class AuthService {
     ]);
 
     return { token, refreshToken };
-  }
-
-  private async sendVerificationCode(email: string): Promise<void> {
-    const otp = await this.otpService.generate(
-      email,
-      OtpScope.EMAIL_VERIFICATION,
-      { replace: true },
-    );
-
-    await this.mailService.sendOnboardingMail({
-      recipients: [email],
-      data: { verificationCode: otp },
-    });
-  }
-
-  async requestEmailVerification({
-    email,
-  }: EmailVerificationRequestInput): Promise<void> {
-    const userToCreate = await this.cacheService.get<UserToCreate>(
-      this.getUserToCreateCacheKey(email),
-    );
-
-    if (!userToCreate) {
-      throw new BadRequestException(
-        'Kindly check the email you signed up with or sign up again',
-      );
-    }
-
-    await this.sendVerificationCode(email);
-  }
-
-  async verifyEmail({
-    email,
-    otp,
-  }: EmailVerificationInput): Promise<SignInSuccessPayload> {
-    const cacheKey = this.getUserToCreateCacheKey(email);
-    const userToCreate = await this.cacheService.get<UserToCreate>(cacheKey);
-
-    if (!userToCreate) {
-      throw new BadRequestException(
-        'Kindly check the email you signed up with or sign up again',
-      );
-    }
-
-    const duplicate = await this.userService.findOne({ email });
-
-    if (duplicate) {
-      throw new BadRequestException('Email is already in use');
-    }
-
-    await this.otpService.verify(email, OtpScope.EMAIL_VERIFICATION, otp);
-
-    // Self sign-up creates staff accounts; patient accounts are linked by the hospital.
-    const user = await this.userService.create({
-      ...userToCreate,
-      type: UserType.STAFF,
-    });
-
-    await this.cacheService.del(cacheKey);
-
-    const tokens = await this.tokenizeUser(user);
-
-    return { id: user.id, email: user.email, type: user.type, ...tokens };
   }
 
   async requestPasswordReset({
