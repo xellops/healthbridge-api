@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `healthbridge-api` is the backend for the HealthBridge EMR (multi-tenant: one `Organization` per hospital). Package manager is **yarn**.
 
-- `src/shared/entity.interface.ts` is the **data spec** for domain entities (snake_case, as stored in the DB). `prd/entities.md` lists the wider set of planned entities.
+- `src/shared/entity.interface.ts` is the **data spec** for domain entities (its fields are snake_case, but DB columns use the entities' camelCase property names). `prd/entities.md` lists the wider set of planned entities.
 - Implemented so far: `user`, `auth`, `profile`, `app-notification(-recipient)`, plus support modules `event-manager`, `cache`, `otp`, `mail`, `storage`. Domain entities (patient, card, encounter, …) are not built yet.
 
 ## Commands
@@ -48,7 +48,7 @@ Code style comes from the team's other Nest projects; follow it for new features
 - Routes are versioned: `@Controller('v1/<resource>')`. Use `@Req() req: ExtendedExpressRequest` for `req.user` / `req.pagination`, and import that type with `import type` (required by `isolatedModules` + `emitDecoratorMetadata`).
 - **Auth is on by default**: `AuthGuard` is the global `APP_GUARD`; mark open routes with `@Public()` (`src/shared/utils/decorators.ts`). Access token via `Authorization: Bearer` or the `token` cookie; the refresh token (`refreshToken` cookie) is signed with a separate secret.
 - **Users are global**, not tenant-scoped (`users` = email, password, type `staff|patient`). Self sign-up holds the account in Redis until the email OTP is verified, then creates a `staff` user. Tenant-owned tables carry `organizationId`.
-- **Entities**: camelCase properties, `@Entity({ name: '<snake_plural>' })`, `timestamptz` dates. `SnakeNamingStrategy` maps columns to snake_case. `User.password` is `select: false`; use `UserService.findOneWithPasswordIncluded` when you need it.
+- **Entities**: camelCase properties, `@Entity({ name: '<snake_plural>' })`, `timestamptz` dates. Column names are the camelCase property names as-is (no naming strategy); only table names are snake_case. Explicit `@JoinColumn({ name })` values must be camelCase too (e.g. `userId`). `User.password` is `select: false`; use `UserService.findOneWithPasswordIncluded` when you need it.
 - Schema: **migrations only**, `synchronize` is off everywhere. Options live in `src/database/database.config.ts` (shared by the app and the CLI); `src/database/data-source.ts` is the CLI entry point (loads `.env` itself; don't import it from the app). Migrations are in `src/database/migrations/`. After changing an entity, run `yarn migration:generate <kebab-name>` (files are `<timestamp>-<kebab-name>.ts`, e.g. `1792257823300-create-users-table.ts`), review the file, then `yarn migration:run`.
 - Paginated list endpoints use `@UseInterceptors(PaginationInterceptor)` and return `PaginatedResult<T>` (`{ page, limit, total, records }`).
 - Services publish changes through `EventManagerService.emit(...)` (currently a no-op placeholder).

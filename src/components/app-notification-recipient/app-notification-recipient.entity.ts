@@ -49,10 +49,10 @@ export class AppNotificationRecipient {
   @ManyToOne(() => AppNotification, (notification) => notification.recipients, {
     onDelete: 'CASCADE',
   })
-  @JoinColumn({ name: 'notification_id' })
+  @JoinColumn({ name: 'notificationId' })
   notification: AppNotification;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'user_id' })
+  @JoinColumn({ name: 'userId' })
   user: User;
 }

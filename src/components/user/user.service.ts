@@ -13,9 +13,20 @@ export class UserService {
     private repository: Repository<User>,
     @Inject(EventManagerService)
     private readonly eventManager: EventManagerService,
+    @Inject(UserService)
+    private readonly userService: UserService,
   ) {}
 
   async create(input: CreateUserInput): Promise<User> {
+    const { id } = await this.repository.save(this.repository.create(input));
+
+    const user = (await this.findOne({ id })) as User;
+    this.eventManager.emit(UserEvent.CREATED, user);
+
+    return user;
+  }
+
+  async createForOrganization(input: CreateUserInput): Promise<User> {
     const { id } = await this.repository.save(this.repository.create(input));
 
     const user = (await this.findOne({ id })) as User;
