@@ -4,11 +4,18 @@ import {
   IsNumberString,
   IsString,
   Length,
+  MaxLength,
   MinLength,
 } from 'class-validator';
 import { NormalizeEmail } from '../../shared/utils/decorators';
 
 export class SignInDto {
+  /** The organization's client ID */
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  clientId: string;
+
   @NormalizeEmail()
   @IsEmail({}, { message: 'Invalid email' })
   email: string;
@@ -19,12 +26,24 @@ export class SignInDto {
 }
 
 export class RequestPasswordResetDto {
+  /** The organization's client ID */
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  clientId: string;
+
   @NormalizeEmail()
   @IsEmail()
   email: string;
 }
 
 export class PasswordResetDto {
+  /** The organization's client ID */
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  clientId: string;
+
   @NormalizeEmail()
   @IsEmail()
   email: string;

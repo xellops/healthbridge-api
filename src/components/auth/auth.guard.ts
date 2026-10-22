@@ -1,6 +1,7 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Inject,
   Injectable,
   UnauthorizedException,
@@ -11,10 +12,13 @@ import constants from '../../shared/utils/constants';
 import { ExtendedExpressRequest } from '../../shared/interfaces/request.interface';
 import { UserService } from '../user/user.service';
 import { AuthTokenPayload } from './auth.interface';
+import { UserStatus, UserType } from '../user/user.enum';
+import { AuthErrorCodes } from './auth.error';
 
 /**
  * Registered globally. Every route requires a valid access token (Bearer
- * header or `token` cookie) unless it is marked with `@Public()`.
+ * header or `token` cookie) unless it is marked with `@Public()`. Suspended
+ * users are rejected, and `@Roles()` limits a route to the given user types.
  */
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -54,8 +58,30 @@ export class AuthGuard implements CanActivate {
 
     const user = await this.userService.findOne({ id: payload.id });
 
-    if (!user) {
+    if (!user || user.status !== UserStatus.ACTIVE) {
       throw new UnauthorizedException();
+    }
+
+    const ignorePasswordResetRequiredCheck =
+      this.reflector.getAllAndOverride<boolean>(constants.IS_PUBLIC_KEY, [
+        context.getHandler(),
+        context.getClass(),
+      ]);
+
+    if (user.passwordResetRequired && !ignorePasswordResetRequiredCheck) {
+      throw new ForbiddenException({
+        code: AuthErrorCodes.AuthPasswordResetRequiredError,
+        message: 'You need to change/reset your password to continue',
+      });
+    }
+
+    const roles = this.reflector.getAllAndOverride<UserType[] | undefined>(
+      constants.ROLES_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+
+    if (roles && !roles.includes(user.type)) {
+      throw new ForbiddenException();
     }
 
     request.user = user;

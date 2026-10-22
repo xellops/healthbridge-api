@@ -28,6 +28,7 @@ export interface OrganizationAdminOnboardingMailInput extends BaseTemplateInput 
     firstName: string;
     email: string;
     organizationName: string;
+    clientId: string;
     temporaryPassword: string;
   };
 }

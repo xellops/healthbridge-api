@@ -7,7 +7,6 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
 import {
   AuthTokenPayload,
   AuthTokens,
@@ -21,11 +20,13 @@ import {
 import { MailService } from '../mail/mail.service';
 import { UserService } from '../user/user.service';
 import { User } from '../user/user.entity';
+import { UserStatus } from '../user/user.enum';
 import { OtpService } from '../otp/otp.service';
 import { OtpScope } from '../otp/otp.interface';
 import { AppNotificationService } from '../app-notification/app-notification.service';
 import { ResourceType } from '../../shared/enums/resource.enum';
-import { AuthErrorCodes } from './auth.error';
+import { OrganizationService } from '../organization/organization.service';
+import { comparePassword, hashPassword } from '../../shared/utils/password';
 
 /** Access token lifetime in seconds. */
 export const accessTokenTtl = () => Number(process.env.JWT_TTL ?? 15 * 60);
@@ -35,8 +36,6 @@ export const refreshTokenTtl = () =>
 
 @Injectable()
 export class AuthService {
-  private readonly saltRounds = 12;
-
   constructor(
     private jwtService: JwtService,
     @Inject(MailService)
@@ -47,37 +46,46 @@ export class AuthService {
     private readonly otpService: OtpService,
     @Inject(AppNotificationService)
     private readonly appNotificationService: AppNotificationService,
+    @Inject(OrganizationService)
+    private readonly organizationService: OrganizationService,
   ) {}
 
-  async hashPassword(unencryptedPassword: string): Promise<string> {
-    return bcrypt.hash(unencryptedPassword, this.saltRounds);
-  }
-
   /**
-   * Returns true if the given password matches the user's hashed password.
-   * The user must have been loaded with its password selected.
+   * Emails are only unique within an organization, so a user is identified
+   * by the organization's client ID plus their email.
+   * Returns null if either doesn't match.
    */
-  async comparePassword(
-    user: User,
-    unencryptedPassword: string,
-  ): Promise<boolean> {
-    return bcrypt.compare(unencryptedPassword, user.password);
+  private async findUserInOrganization(
+    clientId: string,
+    email: string,
+    { withPassword = false } = {},
+  ): Promise<User | null> {
+    const organization = await this.organizationService.findOne({ clientId });
+
+    if (!organization) return null;
+
+    const query = { email, organizationId: organization.id };
+
+    return withPassword
+      ? this.userService.findOneWithPasswordIncluded(query)
+      : this.userService.findOne(query);
   }
 
   async signIn(input: SignInInput): Promise<SignInSuccessPayload> {
-    const user = await this.userService.findOneWithPasswordIncluded({
-      email: input.email,
-    });
+    const user = await this.findUserInOrganization(
+      input.clientId,
+      input.email,
+      { withPassword: true },
+    );
 
-    if (!user || !(await this.comparePassword(user, input.password))) {
-      throw new UnauthorizedException('Email or password is incorrect');
+    if (!user || !(await comparePassword(input.password, user.password))) {
+      throw new UnauthorizedException(
+        'Client ID, email or password is incorrect',
+      );
     }
 
-    if (user?.passwordResetRequired) {
-      throw new ForbiddenException({
-        code: AuthErrorCodes.AuthPasswordResetRequiredError,
-        message: 'You need to reset your password to continue',
-      });
+    if (user.status !== UserStatus.ACTIVE) {
+      throw new UnauthorizedException('Your account has been suspended');
     }
 
     const tokens = await this.tokenizeUser(user);
@@ -90,7 +98,13 @@ export class AuthService {
       recipientIds: [user.id],
     });
 
-    return { id: user.id, email: user.email, type: user.type, ...tokens };
+    return {
+      id: user.id,
+      email: user.email,
+      type: user.type,
+      organizationId: user.organizationId,
+      ...tokens,
+    };
   }
 
   async refreshToken(refreshToken?: string): Promise<AuthTokens> {
@@ -111,7 +125,7 @@ export class AuthService {
 
     const user = await this.userService.findOne({ id: payload.id });
 
-    if (!user) {
+    if (!user || user.status !== UserStatus.ACTIVE) {
       throw new UnauthorizedException();
     }
 
@@ -141,36 +155,40 @@ export class AuthService {
   }
 
   async requestPasswordReset({
+    clientId,
     email,
   }: PasswordResetRequestInput): Promise<void> {
-    const user = await this.userService.findOne({ email });
+    const user = await this.findUserInOrganization(clientId, email);
 
     // Respond the same way whether or not the account exists.
     if (!user) return;
 
-    const otp = await this.otpService.generate(email, OtpScope.PASSWORD_RESET, {
-      replace: true,
-    });
+    // Keyed by user ID: the same email can exist in several organizations.
+    const otp = await this.otpService.generate(
+      user.id,
+      OtpScope.PASSWORD_RESET,
+      { replace: true },
+    );
 
     await this.mailService.sendPasswordResetRequestMail({
-      recipients: [email],
+      recipients: [user.email],
       data: { passwordResetCode: otp },
     });
   }
 
   async resetPassword(input: PasswordResetInput): Promise<void> {
-    const { email, otp, password } = input;
-    const user = await this.userService.findOne({ email });
+    const { clientId, email, otp, password } = input;
+    const user = await this.findUserInOrganization(clientId, email);
 
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
-    await this.otpService.verify(email, OtpScope.PASSWORD_RESET, otp);
+    await this.otpService.verify(user.id, OtpScope.PASSWORD_RESET, otp);
 
     await this.userService.updatePassword(
       { id: user.id },
-      await this.hashPassword(password),
+      await hashPassword(password),
     );
   }
 
@@ -182,13 +200,16 @@ export class AuthService {
       id: userId,
     });
 
-    if (!user || !(await this.comparePassword(user, input.currentPassword))) {
+    if (
+      !user ||
+      !(await comparePassword(input.currentPassword, user.password))
+    ) {
       throw new BadRequestException('Incorrect password');
     }
 
     await this.userService.updatePassword(
       { id: user.id },
-      await this.hashPassword(input.newPassword),
+      await hashPassword(input.newPassword),
     );
   }
 }

@@ -15,11 +15,11 @@ import { Organization } from './organization.entity';
 import { EventManagerService } from '../event-manager/event-manager.service';
 import { OrganizationEvent } from './organization.event';
 import { OrganizationErrorCodes } from './organization.error';
-import { AuthService } from '../auth/auth.service';
+import { hashPassword } from '../../shared/utils/password';
 import { UserService } from '../user/user.service';
 import { UserType } from '../user/user.enum';
-import { UserEvent } from '../user/user.event';
 import { MailService } from '../mail/mail.service';
+import { OrganizationUserEvent } from '../organization-user/organization-user.event';
 
 @Injectable()
 export class OrganizationService {
@@ -28,8 +28,6 @@ export class OrganizationService {
     private repository: Repository<Organization>,
     @Inject(EventManagerService)
     private readonly eventManager: EventManagerService,
-    @Inject(AuthService)
-    private readonly authService: AuthService,
     @Inject(UserService)
     private readonly userService: UserService,
     @Inject(MailService)
@@ -59,8 +57,7 @@ export class OrganizationService {
     }
 
     const temporaryPassword = nanoid(16);
-    const hashedPassword =
-      await this.authService.hashPassword(temporaryPassword);
+    const hashedPassword = await hashPassword(temporaryPassword);
 
     const { organization, admin } = await this.repository.manager.transaction(
       async (manager) => {
@@ -86,7 +83,7 @@ export class OrganizationService {
       },
     );
 
-    this.eventManager.emit(UserEvent.CREATED, admin);
+    this.eventManager.emit(OrganizationUserEvent.CREATED, admin);
 
     const created = await this.findFullDetails({ id: organization.id });
     this.eventManager.emit(OrganizationEvent.CREATED, created);
@@ -97,6 +94,7 @@ export class OrganizationService {
         firstName: admin.firstName,
         email: admin.email,
         organizationName: created.name,
+        clientId: created.clientId,
         temporaryPassword,
       },
     });

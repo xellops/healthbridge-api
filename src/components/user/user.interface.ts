@@ -1,4 +1,4 @@
-import { UserType } from './user.enum';
+import { UserStatus, UserType } from './user.enum';
 
 export interface CreateUseForOrganizationInput {
   firstName: string;
@@ -10,7 +10,18 @@ export interface CreateUseForOrganizationInput {
   organizationId: string;
 }
 
+export interface UserFilter {
+  organizationId?: string;
+  /** Matches any of the given types */
+  types?: UserType[];
+  status?: UserStatus;
+  /** Case-insensitive match on first name, last name or email */
+  search?: string;
+}
+
 export interface UserQuery {
   id?: string;
   email?: string;
+  organizationId?: string;
+  status?: UserStatus;
 }

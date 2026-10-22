@@ -18,7 +18,10 @@ import {
   SignInDto,
 } from './auth.dto';
 import { AuthTokens } from './auth.interface';
-import { Public } from '../../shared/utils/decorators';
+import {
+  IgnorePasswordResetRequiredCheck,
+  Public,
+} from '../../shared/utils/decorators';
 import type { ExtendedExpressRequest } from '../../shared/interfaces/request.interface';
 
 @Controller('v1/auth')
@@ -81,6 +84,7 @@ export class AuthController {
     return this.authService.resetPassword(body);
   }
 
+  @IgnorePasswordResetRequiredCheck()
   @Patch('change-password')
   async changePassword(
     @Body() body: PasswordChangeDto,

@@ -19,6 +19,7 @@ export interface CreateOrganizationInput {
 
 export interface OrganizationQuery {
   id?: string;
+  clientId?: string;
   email?: string;
   ownership?: OrganizationOwnership;
   level?: OrganizationLevel;

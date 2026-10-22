@@ -5,6 +5,7 @@ import { AuthService } from './auth.service';
 import { MailModule } from '../mail/mail.module';
 import { OtpModule } from '../otp/otp.module';
 import { AppNotificationModule } from '../app-notification/app-notification.module';
+import { OrganizationModule } from '../organization/organization.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { AppNotificationModule } from '../app-notification/app-notification.modu
     MailModule,
     OtpModule,
     AppNotificationModule,
+    OrganizationModule,
   ],
   controllers: [AuthController],
   providers: [AuthService],

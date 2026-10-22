@@ -1,6 +1,7 @@
 import { UserType } from '../user/user.enum';
 
 export interface SignInInput {
+  clientId: string;
   email: string;
   password: string;
 }
@@ -14,13 +15,16 @@ export interface SignInSuccessPayload extends AuthTokens {
   id: string;
   email: string;
   type: UserType;
+  organizationId: string;
 }
 
 export interface PasswordResetRequestInput {
+  clientId: string;
   email: string;
 }
 
 export interface PasswordResetInput {
+  clientId: string;
   email: string;
   otp: string;
   password: string;
