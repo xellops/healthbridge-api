@@ -12,6 +12,7 @@ import {
   OrganizationUserFilter,
   SuspendOrganizationUserInput,
   ReactivateOrganizationUserInput,
+  ChangeOrganizationUserDepartmentInput,
 } from './organization-user.interface';
 import { EventManagerService } from '../event-manager/event-manager.service';
 import { OrganizationUserEvent } from './organization-user.event';
@@ -23,6 +24,8 @@ import { User } from '../user/user.entity';
 import { UserStatus } from '../user/user.enum';
 import { UserQuery } from '../user/user.interface';
 import { OrganizationService } from '../organization/organization.service';
+import { DepartmentService } from '../department/department.service';
+import { DepartmentStatus } from '../department/department.enum';
 import { PaginatedResult } from '../../shared/interfaces/paginated-result.interface';
 import { Pagination } from '../../shared/interfaces/pagination.interface';
 
@@ -37,6 +40,8 @@ export class OrganizationUserService {
     private readonly mailService: MailService,
     @Inject(OrganizationService)
     private readonly organizationService: OrganizationService,
+    @Inject(DepartmentService)
+    private readonly departmentService: DepartmentService,
   ) {}
 
   async create(input: CreateOrganizationUserInput): Promise<User> {
@@ -184,5 +189,65 @@ export class OrganizationUserService {
     this.eventManager.emit(OrganizationUserEvent.REACTIVATED, reactivated);
 
     return reactivated;
+  }
+
+  /**
+   * Moves a user to another department in the same organization and emails
+   * them about it. The department must be active.
+   */
+  async changeDepartment(
+    input: ChangeOrganizationUserDepartmentInput,
+  ): Promise<User> {
+    const { userId, organizationId, departmentId } = input;
+    const user = await this.findOneInOrganization(userId, organizationId);
+
+    if (user.departmentId === departmentId) {
+      throw new ConflictException({
+        code: OrganizationUserErrorCodes.OrganizationUserAlreadyInDepartmentError,
+        message: 'This user is already in that department',
+      });
+    }
+
+    // Scoped to the organization, so departments of other organizations are a 404.
+    const department = await this.departmentService.findOne({
+      id: departmentId,
+      organizationId,
+    });
+
+    if (department.status !== DepartmentStatus.ACTIVE) {
+      throw new BadRequestException({
+        code: OrganizationUserErrorCodes.OrganizationUserInactiveDepartmentError,
+        message: 'Users cannot be moved to an inactive department',
+      });
+    }
+
+    const previousDepartment = user.departmentId
+      ? await this.departmentService.findOne({
+          id: user.departmentId,
+          organizationId,
+        })
+      : null;
+
+    const updated = await this.userService.updateDepartment(
+      user.id,
+      department.id,
+    );
+    this.eventManager.emit(OrganizationUserEvent.DEPARTMENT_CHANGED, updated);
+
+    const organization = await this.organizationService.findFullDetails({
+      id: organizationId,
+    });
+
+    await this.mailService.sendDepartmentChangeMail({
+      recipients: [updated.email],
+      data: {
+        firstName: updated.firstName,
+        organizationName: organization.name,
+        departmentName: department.name,
+        previousDepartmentName: previousDepartment?.name ?? null,
+      },
+    });
+
+    return updated;
   }
 }

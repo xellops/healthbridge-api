@@ -5,6 +5,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
 } from 'class-validator';
 import { NormalizeEmail } from '../../shared/utils/decorators';
@@ -29,6 +30,9 @@ export class CreateOrganizationUserDto {
 
   @IsIn(ORGANIZATION_USER_TYPES)
   type: UserType;
+
+  @IsUUID()
+  departmentId: string;
 }
 
 export class OrganizationUserFilterDto {
@@ -45,4 +49,17 @@ export class OrganizationUserFilterDto {
   @IsString()
   @MaxLength(80)
   search?: string;
+
+  @IsOptional()
+  @IsUUID()
+  organizationId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  departmentId?: string;
+}
+
+export class ChangeOrganizationUserDepartmentDto {
+  @IsUUID()
+  departmentId: string;
 }

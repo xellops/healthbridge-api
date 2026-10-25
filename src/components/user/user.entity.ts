@@ -3,11 +3,14 @@ import {
   CreateDateColumn,
   Entity,
   Index,
+  JoinColumn,
+  ManyToOne,
   PrimaryGeneratedColumn,
   Unique,
   UpdateDateColumn,
 } from 'typeorm';
 import { UserStatus, UserType } from './user.enum';
+import { Department } from '../department/department.entity';
 
 /**
  * A login identity. Users are global: the same user can be staff in, or a
@@ -35,6 +38,11 @@ export class User {
   @Column({ type: 'uuid' })
   organizationId: string;
 
+  /** Null for users not assigned to a department (e.g. admins). */
+  @Index()
+  @Column({ type: 'uuid', nullable: true })
+  departmentId: string | null;
+
   @Index()
   @Column({ type: 'enum', enum: Object.values(UserType) })
   type: UserType;
@@ -55,4 +63,9 @@ export class User {
 
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
+
+  /** A department with users can't be deleted. */
+  @ManyToOne(() => Department, { onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'departmentId' })
+  department: Department | null;
 }

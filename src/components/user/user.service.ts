@@ -103,6 +103,10 @@ export class UserService {
     });
   }
 
+  async existsInDepartment(departmentId: string): Promise<boolean> {
+    return this.repository.exists({ where: { departmentId } });
+  }
+
   async findOne(query: UserQuery): Promise<User | null> {
     return this.repository.findOne({ where: query });
   }
@@ -113,6 +117,11 @@ export class UserService {
       .addSelect('user.password')
       .where(query)
       .getOne();
+  }
+
+  async updateDepartment(id: string, departmentId: string): Promise<User> {
+    await this.repository.update({ id }, { departmentId });
+    return (await this.findOne({ id })) as User;
   }
 
   async updateStatus(id: string, status: UserStatus): Promise<User> {

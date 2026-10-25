@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import { OrganizationUserService } from './organization-user.service';
 import {
+  ChangeOrganizationUserDepartmentDto,
   CreateOrganizationUserDto,
   OrganizationUserFilterDto,
 } from './organization-user.dto';
@@ -95,6 +96,22 @@ export class OrganizationUserController {
     return this.organizationUserService.reactivate({
       userId: id,
       organizationId: req.user.organizationId,
+    });
+  }
+
+  @Roles(UserType.ADMIN)
+  @Patch(':id/department')
+  @HttpCode(HttpStatus.OK)
+  @ResponseMessage('Organization user moved to department')
+  async changeDepartment(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: ChangeOrganizationUserDepartmentDto,
+    @Req() req: ExtendedExpressRequest,
+  ) {
+    return this.organizationUserService.changeDepartment({
+      userId: id,
+      organizationId: req.user.organizationId,
+      departmentId: body.departmentId,
     });
   }
 }

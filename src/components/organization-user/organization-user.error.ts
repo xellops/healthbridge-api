@@ -4,4 +4,6 @@ export enum OrganizationUserErrorCodes {
   OrganizationUserAlreadySuspendedError = 'OrganizationUserAlreadySuspendedError',
   OrganizationUserSelfSuspensionError = 'OrganizationUserSelfSuspensionError',
   OrganizationUserAlreadyActiveError = 'OrganizationUserAlreadyActiveError',
+  OrganizationUserAlreadyInDepartmentError = 'OrganizationUserAlreadyInDepartmentError',
+  OrganizationUserInactiveDepartmentError = 'OrganizationUserInactiveDepartmentError',
 }

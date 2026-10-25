@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 `healthbridge-api` is the backend for the HealthBridge EMR (multi-tenant: one `Organization` per hospital). Package manager is **yarn**.
 
 - `src/shared/entity.interface.ts` is the **data spec** for domain entities (its fields are snake_case, but DB columns use the entities' camelCase property names). `prd/entities.md` lists the wider set of planned entities.
+- **Read `prd/` before implementing a feature.** It holds per-feature business and product rules (e.g. `prd/service.md`: system-generated services, per-branch price and status). When a PRD file covers the feature, it overrides the data spec. Don't invent business rules such as uniqueness when the PRD or spec doesn't state them; ask instead.
 - Implemented so far: `user`, `auth`, `profile`, `app-notification(-recipient)`, plus support modules `event-manager`, `cache`, `otp`, `mail`, `storage`. Domain entities (patient, card, encounter, …) are not built yet.
 
 ## Commands

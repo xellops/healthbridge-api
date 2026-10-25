@@ -1,0 +1,9 @@
+<p>Hello {{firstName}},</p>
+
+{{#if previousDepartmentName}}
+<p>You have been moved from the <strong>{{previousDepartmentName}}</strong> department to the <strong>{{departmentName}}</strong> department at {{organizationName}}.</p>
+{{else}}
+<p>You have been assigned to the <strong>{{departmentName}}</strong> department at {{organizationName}}.</p>
+{{/if}}
+
+<p>If you think this is a mistake, please contact your administrator.</p>

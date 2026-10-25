@@ -9,6 +9,7 @@ export interface CreateOrganizationUserInput {
   email: string;
   type: UserType;
   organizationId: string;
+  departmentId: string;
 }
 
 export interface SuspendOrganizationUserInput {
@@ -30,4 +31,12 @@ export interface OrganizationUserFilter {
   type?: UserType;
   status?: UserStatus;
   search?: string;
+  departmentId?: string;
+}
+
+export interface ChangeOrganizationUserDepartmentInput {
+  userId: string;
+  organizationId: string;
+  /** The department to move the user to */
+  departmentId: string;
 }

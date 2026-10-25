@@ -7,6 +7,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { JobQueueList } from '../../shared/enums/queue.enum';
 import {
+  DepartmentChangeMailInput,
   MailQueueOptions,
   OrganizationAdminOnboardingMailInput,
   PasswordResetRequestMailInput,
@@ -110,6 +111,21 @@ export class MailService {
     const subject = 'Your HealthBridge organization account';
     const template = this.composeTemplate(
       'organization-admin-onboarding',
+      subject,
+      options.data,
+    );
+    await this.queueMail(
+      { recipients: options.recipients, subject, template },
+      { attempts: 10 },
+    );
+  }
+
+  async sendDepartmentChangeMail(
+    options: DepartmentChangeMailInput,
+  ): Promise<void> {
+    const subject = 'HealthBridge - Your department has changed';
+    const template = this.composeTemplate(
+      'department-change',
       subject,
       options.data,
     );

@@ -16,6 +16,10 @@ import { ProfileModule } from './components/profile/profile.module';
 import { AppNotificationModule } from './components/app-notification/app-notification.module';
 import { OrganizationModule } from './components/organization/organization.module';
 import { OrganizationUserModule } from './components/organization-user/organization-user.module';
+import { DepartmentModule } from './components/department/department.module';
+import { BranchModule } from './components/branch/branch.module';
+import { ServiceModule } from './components/service/service.module';
+import { BranchServiceModule } from './components/branch-service/branch-service.module';
 
 @Module({
   imports: [
@@ -40,6 +44,10 @@ import { OrganizationUserModule } from './components/organization-user/organizat
     AppNotificationModule,
     OrganizationModule,
     OrganizationUserModule,
+    DepartmentModule,
+    BranchModule,
+    ServiceModule,
+    BranchServiceModule,
   ],
   controllers: [AppController],
   providers: [

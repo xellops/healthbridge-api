@@ -32,3 +32,13 @@ export interface OrganizationAdminOnboardingMailInput extends BaseTemplateInput 
     temporaryPassword: string;
   };
 }
+
+export interface DepartmentChangeMailInput extends BaseTemplateInput {
+  data: {
+    firstName: string;
+    organizationName: string;
+    departmentName: string;
+    /** Null when the user had no department before */
+    previousDepartmentName: string | null;
+  };
+}
